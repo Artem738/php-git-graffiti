@@ -2,8 +2,7 @@
 
 return [
     // The first real run chooses Sunday automatically and saves it in var/state.json.
-    // Fixed GMT+0, without daylight-saving time.
-    'timezone' => 'GMT',
+    'timezone' => 'Europe/Kyiv',
     'commits_per_pixel' => 5,
 
     // Create a separate EMPTY GitHub repository (no README or license).
