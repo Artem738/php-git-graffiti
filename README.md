@@ -77,8 +77,8 @@ moving pixels. Keep `var/` across updates and use `git pull` to update the sourc
   blank. If cron misses the first Sunday entirely, the script waits for the next
   Sunday and logs the reschedule. It never begins midway through the first week.
 - Once started, the calendar decides the position: Sunday is row 1, Monday row 2,
-  and the next Sunday begins the next column. Timezone and daylight-saving
-  changes use calendar dates, not 24-hour intervals.
+  and the next Sunday begins the next column. The default timezone is **GMT+0**,
+  without daylight-saving time; days are counted by calendar dates.
 - `STATUS.txt` shows the first run, scheduled and confirmed start, full elapsed
   drawing days, current day/row/column, last run, last successfully processed day
   and last result. Its text is in Russian.
