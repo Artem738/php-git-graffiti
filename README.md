@@ -1,32 +1,31 @@
 # PHP Git Graffiti
 
-Draw text on your GitHub contribution graph, one day at a time.
+Draw on your GitHub contribution graph, one day at a time.
 
-A small PHP CLI program for ordinary Linux hosting. It reads a picture from
-`DRAW-TEXT.txt` and creates today's commits when cron runs. PHP and Git are the
-only runtime dependencies: no Composer, framework, database or web server.
+A small PHP CLI script for cron. Edit a text picture, fill in your GitHub settings,
+and run `php run.php`. No Composer, framework, database or web server.
 
-This is contribution art. Generated commits are empty and explicitly labelled
-`graffiti:`. They do not represent software development activity.
+## Files
 
-Use **`run.php` for cron**. Use `graffiti.php` to preview the drawing, export the
-schedule and initialize the canvas.
+- **`DRAW-TEXT.txt`** — your picture, drawn with `#` characters.
+- **`config.php`** — your local GitHub settings, copied from `config.example.php`.
+- **`run.php`** — the file to run from cron.
+- **`STATUS.txt`** — a readable progress report, maintained by the script.
+- **`var/run.log`** — a timestamped history of runs, skips and errors.
+- `var/state.json` — saved start date and progress; do not delete or edit it.
+- `var/canvas/` — the separate Git working copy containing the drawing commits.
 
-## Requirements
+Local settings, status, logs and state are ignored by Git. The script keeps its
+source repository separate from the canvas repository.
 
-- PHP **8.1+ CLI** with `proc_open` enabled.
-- Git, SSH and outgoing access to GitHub.
-- A cron task and a writable directory outside the site's public web root.
-- A GitHub account and a **separate empty repository** for the drawing.
+## Draw
 
-Development checks have been run on PHP 8.3. Older supported PHP versions have
-not yet been tested. SSH host-key verification remains enabled.
+Edit [DRAW-TEXT.txt](DRAW-TEXT.txt). The supplied drawing says `HELLO-GIT`.
+Use exactly seven rows: Sunday at the top, Saturday at the bottom. Each column
+represents one week. `#` means a pixel; a dot or space means background. Shorter
+rows are padded on the right. The maximum width is 52 weeks.
 
-## Draw your message
-
-Open **[DRAW-TEXT.txt](DRAW-TEXT.txt)** and draw directly with `#` characters.
-The supplied picture says `HELLO-GIT`. You can replace it with any word or picture.
-For example, this is `HI`:
+For example, `HI`:
 
 ```text
 .......
@@ -38,175 +37,84 @@ For example, this is `HI`:
 .......
 ```
 
-- `#` is a lit pixel: create commits on that day.
-- A dot `.` or a space is background: no new commits.
-- Use exactly **seven rows**, Sunday at the top, Saturday at the bottom.
-- Each column is one week. The widest row sets the width, up to 52 columns.
-- Shorter rows are padded with background on the right. Empty rows are allowed.
+## Configure and start
 
-There are no built-in fonts or letter codes to edit in PHP. The supplied
-`HELLO-GIT` drawing is 35 weeks wide.
+Requires PHP **8.1+ CLI** with `proc_open`, Git, SSH and outgoing access to GitHub.
+Development was checked on PHP 8.3. Put the project outside the public web root.
 
-## Preview
+1. Create a **separate empty GitHub repository** for the canvas, without a README,
+   license or .gitignore. This source repository is not the canvas.
+2. Copy `config.example.php` to `config.php`. Fill in the canvas SSH URL, your Git
+   name and an email associated with your GitHub account. You can use your exact
+   [GitHub noreply address](https://github.com/settings/emails).
+3. Configure a dedicated SSH key with write access to the canvas repository.
+   Follow GitHub's [deploy-key instructions](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys).
+   Verify the host key and noninteractive connection manually before enabling cron.
+4. Preview without creating files, making commits or accessing GitHub:
 
-```bash
-php graffiti.php preview
-php graffiti.php plan > plan.csv
-php run.php --dry-run --date=2026-10-26
-```
+   ```bash
+   php run.php --dry-run
+   ```
 
-Without `config.php`, these commands use `config.example.php`. They do not run Git
-or create files (the `>` redirection above creates `plan.csv` if you use it).
+5. Start the schedule and enable cron:
 
-## Configure
+   ```bash
+   php run.php
+   ```
 
-```bash
-cp config.example.php config.php
-```
+There is no separate initialization command. The script prepares the canvas
+when its first commit is needed. Settings and drawing are frozen by the first
+real run; changing them later stops execution with an error instead of silently
+moving pixels. Keep `var/` across updates and use `git pull` to update the source.
 
-Edit `config.php`:
+## Sunday and progress
 
-- `drawing_file`: the plain text picture, default `DRAW-TEXT.txt`. Relative paths
-  are resolved beside the config file.
-- `start_date`: the Sunday on which the first column begins, in `YYYY-MM-DD` form.
-  Change the example date to your chosen Sunday.
-- `timezone`: the timezone used to choose today's pixel, for example
-  `Europe/Kyiv`. Commit timestamps include the corresponding UTC offset.
-- `commits_per_pixel`: an integer from 1 to 100. This is a count, not a guaranteed
-  green shade: your other contributions affect the graph's colors and background.
-- `remote`: the SSH clone URL of your **canvas repository**.
-- `author_name` / `author_email`: your Git identity. Use the exact GitHub-provided
-  noreply email from [GitHub email settings](https://github.com/settings/emails)
-  if you do not want to publish your personal address.
-- `canvas_dir`: a dedicated working copy, default `var/canvas`. Relative paths
-  are resolved beside the config file. Never use a real project's repository.
+- The first real run saves its timestamp and a Sunday start date. If today is
+  Sunday, it starts today; otherwise it waits for the next Sunday.
+- That date is saved **before any Git operation**. Repeated cron runs do not move
+  the start date or advance the drawing.
+- The start must be confirmed by an actual Sunday run, even if Sunday's row is
+  blank. If cron misses the first Sunday entirely, the script waits for the next
+  Sunday and logs the reschedule. It never begins midway through the first week.
+- Once started, the calendar decides the position: Sunday is row 1, Monday row 2,
+  and the next Sunday begins the next column. Timezone and daylight-saving
+  changes use calendar dates, not 24-hour intervals.
+- `STATUS.txt` shows the first run, scheduled and confirmed start, full elapsed
+  drawing days, current day/row/column, last run, last successfully processed day
+  and last result. Its text is in Russian.
+- Missing calendar days are reported in `var/run.log`; no backdated commits are
+  made and later pixels keep their calendar dates.
+- Repeated runs do not duplicate commits. Pending pushes are retried, including
+  on background days and after the drawing period ends.
+- A lock prevents simultaneous jobs. Git failures preserve local commits and
+  produce a nonzero exit code. The script never force-pushes or rewrites history.
 
-`config.php`, `var/` and logs are ignored by this project's Git repository.
-Keep SSH private keys outside the project, normally in `~/.ssh/`.
-
-The source repository (`php-git-graffiti`) and canvas repository are separate.
-Create the canvas on GitHub **without a README, license or .gitignore**.
-
-## Connect the hosting account to GitHub
-
-Set up a dedicated SSH key for the canvas, add its public key to the canvas
-repository's **Settings → Deploy keys**, and enable **Allow write access**.
-For multiple keys on the same hosting account, select the canvas key with an SSH
-host alias in `~/.ssh/config` and use that alias in `remote`.
-
-Follow GitHub's [deploy-key instructions](https://docs.github.com/en/authentication/connecting-to-github-with-ssh/managing-deploy-keys).
-Verify GitHub's host key and the SSH connection manually before enabling cron.
-The program disables password prompts so an unattended run cannot wait for input.
-An encrypted SSH key needs a suitable noninteractive agent; a terminal-only
-`ssh-agent` session is usually not available to cron.
-
-## Initialize and run
-
-```bash
-php graffiti.php preview
-php graffiti.php init
-php run.php --dry-run
-php run.php
-```
-
-`init` checks remote access and refuses a remote with existing branches. It creates
-the local canvas on `main` and saves the drawing's identity inside `.git/`.
-It creates **no commits and performs no push**. Remote write permission is first
-tested when a real push is needed.
-
-`run.php` creates the configured number of empty commits for today's lit pixel and
-pushes to `main`. On a background day it creates no commits, but it still retries
-any pending push. If there are no commits yet, the empty GitHub repository stays
-empty until the first lit day. Make sure `main` is the repository's default branch
-after the first push.
-
-Drawing settings are fixed by `init`, so a cron run cannot silently switch to a
-different pattern. To change the drawing's pixels, dates, intensity, timezone or author email,
-choose a new empty canvas repository and a new empty `canvas_dir`, then run `init`.
-Keep existing canvases if you want their contributions to remain visible.
+Do not delete `var/state.json` to restart an existing drawing. It holds the
+calendar anchor. A new independent drawing needs a separate project directory
+and a fresh empty canvas repository.
 
 ## Cron
 
-First check the executable paths on your hosting account:
-
-```bash
-command -v php git ssh
-```
-
-Example **user crontab** (replace paths with the results above):
+Check the paths with `command -v php git ssh`. Use the absolute PHP path and
+include Git and SSH in cron's PATH. Example user crontab:
 
 ```cron
 PATH=/usr/local/bin:/usr/bin:/bin
-15 * * * * /absolute/path/to/php /home/your-user/php-git-graffiti/run.php >> /home/your-user/php-git-graffiti/var/cron.log 2>&1
+15 * * * * /absolute/path/to/php /home/your-user/php-git-graffiti/run.php
 ```
 
-Initialize the canvas before adding cron; this also creates `var/` for the log.
-In a hosting control panel, choose “every hour, at minute 15” and enter only the
-command following the five schedule fields. Include the directories containing
-Git and SSH in cron's `PATH`.
+In a hosting panel, select every hour at minute 15 and enter only the command.
+The script writes its own `var/run.log`; shell redirection is optional. Hourly
+execution gives failed jobs another chance the same day. The hosting scheduler
+controls the execution time; `timezone` in the config selects the drawing day.
 
-Hourly execution gives failed runs another opportunity during the same day. The
-program reads already-created pixel commits, so repeated runs do not duplicate
-them. A nonblocking file lock prevents overlapping jobs. The hour is interpreted
-by the hosting scheduler; `timezone` in the config determines which calendar day
-is painted. Add log rotation through your host if this runs long term.
+## About the graph
 
-## Behavior and limits
+Generated commits are empty and labelled `graffiti:`: this is contribution art.
+Your other contributions affect the background and green shades. The canvas
+must be a standalone repository, and `main` must be its default branch after the
+first push. Commits need an email linked to your account. GitHub may take up to
+24 hours to update the graph. See the [contribution rules](https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference).
 
-- Real runs always use the current day. `--date` is allowed only with `--dry-run`.
-  Missed days are **not backfilled**. No future or past commits are generated.
-- A failed push leaves commits locally. A later run retries them, including on a
-  background day, without creating them again.
-- A run interrupted between commits resumes from the missing pixel indices.
-- A run crossing local midnight stops creating commits for the previous day.
-- Keep the canvas exclusive to this program. It refuses uncommitted files, a
-  different branch/origin, or remote history that is not an ancestor of its local
-  history. It never pulls, rebases, resets or force-pushes.
-- If another writer updates the remote during execution, the normal push can be
-  rejected; local commits are preserved for inspection.
-- Git operations have a 60-second timeout. A failure exits with code 1 and writes
-  its error to stderr. Successful jobs write a short dated result to stdout.
-- The graph includes contributions from your other repositories. Creating this
-  tool does not give control over the exact appearance of the whole graph.
-- GitHub requires an author email associated with your account and qualifying
-  commits in the repository's default branch. The canvas must be a standalone
-  repository, not a fork. Graph updates can take up to 24 hours.
-
-See GitHub's [contribution rules](https://docs.github.com/en/account-and-profile/reference/profile-contributions-reference)
-and [missing-contribution troubleshooting](https://docs.github.com/en/account-and-profile/how-tos/contribution-settings/troubleshooting-missing-contributions).
-
-## Commands
-
-```text
-php graffiti.php preview
-php graffiti.php plan
-php graffiti.php init
-php run.php --dry-run
-php run.php --dry-run --date=2026-10-26
-php run.php
-php graffiti.php --version
-php graffiti.php help
-```
-
-Both entry points accept `--config=/absolute/path/config.php`, for example
-`php run.php --config=/absolute/path/config.php`.
-
-## Development checks
-
-```bash
-php -l graffiti.php
-php -l run.php
-php tests/check.php
-```
-
-Checks use temporary local repositories and never contact GitHub. They cover
-calendar alignment, DST, malformed inputs, read-only preview, duplicate prevention,
-partial runs, failed pushes, background-day retries and conflicting remote changes.
-
-## Inspiration and license
-
-Inspired by [gitfiti](https://github.com/gelstudios/gitfiti) and existing PHP
-projects such as [Contributions-Pen](https://github.com/Kurisu-A/Contributions-Pen).
-This implementation focuses on daily cron execution and small hosting setups.
-
-MIT license. See [LICENSE](LICENSE).
+Inspired by [gitfiti](https://github.com/gelstudios/gitfiti) and
+[Contributions-Pen](https://github.com/Kurisu-A/Contributions-Pen). MIT license.

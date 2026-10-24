@@ -1,4 +1,5 @@
 /config.php
 /var/
 /plan.csv
+/STATUS.txt
 *.log

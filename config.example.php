@@ -1,10 +1,7 @@
 <?php
 
 return [
-    // Edit the picture directly: # is a pixel, a dot or space is background.
-    'drawing_file' => 'DRAW-TEXT.txt',
-    // Start on a Sunday. Each column of the drawing takes one week.
-    'start_date' => '2026-10-25',
+    // The first real run chooses Sunday automatically and saves it in var/state.json.
     'timezone' => 'Europe/Kyiv',
     'commits_per_pixel' => 5,
 
@@ -13,7 +10,4 @@ return [
     'author_name' => 'Your Name',
     // Copy your GitHub noreply address from https://github.com/settings/emails.
     'author_email' => 'you@example.com',
-
-    // A dedicated working copy. Never point this at a real project's repository.
-    'canvas_dir' => 'var/canvas',
 ];
