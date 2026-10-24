@@ -2,7 +2,8 @@
 
 return [
     // The first real run chooses Sunday automatically and saves it in var/state.json.
-    'timezone' => 'Europe/Kyiv',
+    // Fixed GMT+3, without automatic clock changes.
+    'timezone' => '+03:00',
     'commits_per_pixel' => 5,
 
     // Create a separate EMPTY GitHub repository (no README or license).
