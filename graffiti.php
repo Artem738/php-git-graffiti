@@ -347,9 +347,9 @@ function main(array $argv): int
             . "php graffiti.php preview                  Preview drawing and date range\n"
             . "php graffiti.php plan                     Print CSV: date,commits\n"
             . "php graffiti.php init                     Prepare a dedicated empty canvas\n"
-            . "php graffiti.php run --dry-run            Inspect today without changing anything\n"
-            . "php graffiti.php run --dry-run --date=YYYY-MM-DD\n"
-            . "php graffiti.php run                      Commit today's pixels and retry pending push\n\n"
+            . "php run.php --dry-run                     Inspect today without changing anything\n"
+            . "php run.php --dry-run --date=YYYY-MM-DD\n"
+            . "php run.php                               Cron: commit today's pixels and retry pending push\n\n"
             . "Optional: --config=/absolute/path/config.php\n"
             . "Copy config.example.php to config.php before init or a real run.\n";
         return 0;

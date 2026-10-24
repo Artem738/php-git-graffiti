@@ -9,6 +9,9 @@ only runtime dependencies: no Composer, framework, database or web server.
 This is contribution art. Generated commits are empty and explicitly labelled
 `graffiti:`. They do not represent software development activity.
 
+Use **`run.php` for cron**. Use `graffiti.php` to preview the drawing, export the
+schedule and initialize the canvas.
+
 ## Requirements
 
 - PHP **8.1+ CLI** with `proc_open` enabled.
@@ -49,7 +52,7 @@ There are no built-in fonts or letter codes to edit in PHP. The supplied
 ```bash
 php graffiti.php preview
 php graffiti.php plan > plan.csv
-php graffiti.php run --dry-run --date=2026-10-26
+php run.php --dry-run --date=2026-10-26
 ```
 
 Without `config.php`, these commands use `config.example.php`. They do not run Git
@@ -102,8 +105,8 @@ An encrypted SSH key needs a suitable noninteractive agent; a terminal-only
 ```bash
 php graffiti.php preview
 php graffiti.php init
-php graffiti.php run --dry-run
-php graffiti.php run
+php run.php --dry-run
+php run.php
 ```
 
 `init` checks remote access and refuses a remote with existing branches. It creates
@@ -111,7 +114,7 @@ the local canvas on `main` and saves the drawing's identity inside `.git/`.
 It creates **no commits and performs no push**. Remote write permission is first
 tested when a real push is needed.
 
-`run` creates the configured number of empty commits for today's lit pixel and
+`run.php` creates the configured number of empty commits for today's lit pixel and
 pushes to `main`. On a background day it creates no commits, but it still retries
 any pending push. If there are no commits yet, the empty GitHub repository stays
 empty until the first lit day. Make sure `main` is the repository's default branch
@@ -134,7 +137,7 @@ Example **user crontab** (replace paths with the results above):
 
 ```cron
 PATH=/usr/local/bin:/usr/bin:/bin
-15 * * * * /absolute/path/to/php /home/your-user/php-git-graffiti/graffiti.php run >> /home/your-user/php-git-graffiti/var/cron.log 2>&1
+15 * * * * /absolute/path/to/php /home/your-user/php-git-graffiti/run.php >> /home/your-user/php-git-graffiti/var/cron.log 2>&1
 ```
 
 Initialize the canvas before adding cron; this also creates `var/` for the log.
@@ -178,19 +181,21 @@ and [missing-contribution troubleshooting](https://docs.github.com/en/account-an
 php graffiti.php preview
 php graffiti.php plan
 php graffiti.php init
-php graffiti.php run --dry-run
-php graffiti.php run --dry-run --date=2026-10-26
-php graffiti.php run
+php run.php --dry-run
+php run.php --dry-run --date=2026-10-26
+php run.php
 php graffiti.php --version
 php graffiti.php help
 ```
 
-All commands accept `--config=/absolute/path/config.php` after the command name.
+Both entry points accept `--config=/absolute/path/config.php`, for example
+`php run.php --config=/absolute/path/config.php`.
 
 ## Development checks
 
 ```bash
 php -l graffiti.php
+php -l run.php
 php tests/check.php
 ```
 
